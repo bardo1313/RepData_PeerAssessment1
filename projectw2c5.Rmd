@@ -1,0 +1,70 @@
+---
+title: "Course 5 week 2"
+author: "Jaime Gómez"
+date: "2024-08-27"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r activity, echo=TRUE}
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+activity<-read.csv("C:/Users/jgomez/Desktop/Cursos 2024/activity.csv")
+steps_per_day <- activity %>% group_by(date) %>% summarise(total=sum(steps, na.rm = T))
+hist(steps_per_day$total)
+mean_steps <- mean(steps_per_day$total, na.rm=T)
+print(mean_steps)
+median_steps <- median(steps_per_day$total, na.rm = T)
+print(median_steps)
+
+steps_per_interval <- activity %>% group_by(interval) %>% summarise(avg=mean(steps, na.rm = T))
+plot<-plot(steps_per_interval$interval, steps_per_interval$avg, type="l")
+
+max <- steps_per_interval %>% subset(steps_per_interval$avg==max(steps_per_interval$avg))
+print(max)
+```
+
+## Imputing missing values
+
+We`re going to replace the Nas with the median of the corresponding interval
+
+```{r imputing, echo=TRUE}
+na<-summary(activity)
+print(na)
+
+imputing <- activity %>% group_by(interval) %>% summarise(med=median(steps, na.rm = T))
+activity_imputing <- merge(activity, imputing, by.x = "interval")
+
+activity_imputing <- activity_imputing %>% mutate(steps= if_else(is.na(steps), med, steps))
+
+steps_per_day_imputed <- activity_imputing %>% group_by(date) %>% summarise(total=sum(steps, na.rm = T))
+hist(steps_per_day_imputed$total)
+mean_steps_imputed <- mean(steps_per_day_imputed$total, na.rm=T)
+print(mean_steps_imputed)
+median_steps_imputed <- median(steps_per_day_imputed$total, na.rm = T)
+print(median_steps_imputed )  
+
+
+
+```
+The median is not affected, while the mean it´s a little bit higher
+
+
+## Weekdays
+
+```{r weekdays, echo=TRUE}
+
+activity_imputing$date <- as.Date.character(activity_imputing$date)
+activity_imputing <- activity_imputing %>% mutate(weekday_1= weekdays(date))
+activity_imputing <- activity_imputing %>% mutate(weekday = if_else(weekday_1 %in% c("sábado", "domingo"), "weekend", "weekday"))
+steps_per_interval_weekday <- activity_imputing %>% group_by(interval, weekday) %>% summarise(avg=mean(steps, na.rm = T))
+ggplot(steps_per_interval_weekday,aes(x=interval, y = avg) )+geom_line()+facet_wrap(facets="weekday")
+```
+ 
